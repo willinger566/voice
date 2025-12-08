@@ -1,0 +1,17 @@
+{
+  "total_samples": 1200,
+  "train_samples": 840,
+  "val_samples": 180,
+  "test_samples": 180,
+  "num_speakers": 4,
+  "num_emotions": 6,
+  "emotion_distribution": {
+    "angry": 200,
+    "fear": 200,
+    "happy": 200,
+    "neutral": 200,
+    "sad": 200,
+    "surprise": 200
+  },
+  "target_sample_rate": 16000
+}

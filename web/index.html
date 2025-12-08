@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文语音情感识别系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .recording {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .emotion-card {
+            transition: all 0.3s ease;
+        }
+        .emotion-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-microphone-alt text-2xl"></i>
+                    <h1 class="text-2xl font-bold">中文语音情感识别系统</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="statusIndicator" class="flex items-center">
+                        <span class="w-3 h-3 bg-green-400 rounded-full mr-2"></span>
+                        <span>系统就绪</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- 主面板 -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- 左侧：录音/上传面板 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-upload mr-3 text-purple-500"></i>
+                    音频输入
+                </h2>
+
+                <!-- 录音按钮 -->
+                <div class="mb-6">
+                    <button id="recordBtn" class="w-full gradient-bg text-white py-4 px-6 rounded-lg font-bold text-lg flex items-center justify-center space-x-3 hover:opacity-90 transition">
+                        <i class="fas fa-microphone text-xl"></i>
+                        <span id="recordBtnText">开始录音</span>
+                    </button>
+                    <p class="text-sm text-gray-500 mt-2 text-center">点击按钮开始录制语音</p>
+                </div>
+
+                <div class="border-t border-gray-200 my-6"></div>
+
+                <!-- 文件上传 -->
+                <div>
+                    <label class="block text-gray-700 font-semibold mb-2">
+                        或上传音频文件
+                    </label>
+                    <input type="file" id="audioFile" accept="audio/*" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-purple-500">
+                    <p class="text-sm text-gray-500 mt-2">支持WAV, MP3, FLAC格式</p>
+                </div>
+
+                <!-- 提交按钮 -->
+                <button id="submitBtn" class="w-full mt-6 bg-purple-600 text-white py-3 px-6 rounded-lg font-bold hover:bg-purple-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    分析情感
+                </button>
+
+                <!-- 音频播放器 -->
+                <div id="audioPlayerContainer" class="mt-6 hidden">
+                    <label class="block text-gray-700 font-semibold mb-2">音频预览</label>
+                    <audio id="audioPlayer" controls class="w-full"></audio>
+                </div>
+            </div>
+
+            <!-- 右侧：结果显示 -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-chart-bar mr-3 text-purple-500"></i>
+                    识别结果
+                </h2>
+
+                <!-- 加载状态 -->
+                <div id="loadingState" class="hidden text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-5xl text-purple-500 mb-4"></i>
+                    <p class="text-gray-600">正在分析情感...</p>
+                </div>
+
+                <!-- 结果显示 -->
+                <div id="resultContainer" class="hidden">
+                    <!-- 主要情感 -->
+                    <div class="text-center mb-6 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+                        <p class="text-gray-600 mb-2">检测到的情感</p>
+                        <div id="mainEmotion" class="text-4xl font-bold text-purple-600 mb-2">-</div>
+                        <div class="flex items-center justify-center space-x-2">
+                            <span class="text-gray-600">置信度:</span>
+                            <span id="confidence" class="text-2xl font-bold text-green-600">-</span>
+                        </div>
+                    </div>
+
+                    <!-- 概率分布图表 -->
+                    <div class="mb-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">情感概率分布</h3>
+                        <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="probChart"></canvas>
+                    </div>
+
+                    <!-- 情感卡片 -->
+                    <div id="emotionCards" class="grid grid-cols-2 gap-3">
+                        <!-- 动态生成 -->
+                    </div>
+                </div>
+
+                <!-- 初始状态 -->
+                <div id="initialState" class="text-center py-12 text-gray-400">
+                    <i class="fas fa-music text-6xl mb-4"></i>
+                    <p>请录制或上传音频以开始分析</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用说明 -->
+        <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-info-circle mr-3 text-blue-500"></i>
+                使用说明
+            </h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="p-4 bg-blue-50 rounded-lg">
+                    <div class="text-2xl mb-2">📝</div>
+                    <h3 class="font-bold mb-2">支持的情感类别</h3>
+                    <p class="text-sm text-gray-600">中性、高兴、悲伤、愤怒、恐惧、惊讶</p>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg">
+                    <div class="text-2xl mb-2">🎤</div>
+                    <h3 class="font-bold mb-2">录音建议</h3>
+                    <p class="text-sm text-gray-600">在安静环境下录制3-10秒的清晰语音</p>
+                </div>
+                <div class="p-4 bg-purple-50 rounded-lg">
+                    <div class="text-2xl mb-2">📊</div>
+                    <h3 class="font-bold mb-2">准确率说明</h3>
+                    <p class="text-sm text-gray-600">模型在CASIA数据集上达到85%+准确率</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API配置
+        const API_URL = 'http://localhost:8000';
+        
+        // 全局变量
+        let mediaRecorder;
+        let audioChunks = [];
+        let recordedBlob;
+        let probChart;
+
+        // 情感标签映射
+        const emotionLabels = {
+            'neutral': '中性',
+            'happy': '高兴',
+            'sad': '悲伤',
+            'angry': '愤怒',
+            'fearful': '恐惧',
+            'surprised': '惊讶'
+        };
+
+        const emotionColors = {
+            'neutral': '#6B7280',
+            'happy': '#F59E0B',
+            'sad': '#3B82F6',
+            'angry': '#EF4444',
+            'fearful': '#8B5CF6',
+            'surprised': '#10B981'
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPIHealth();
+            initializeEventListeners();
+        });
+
+        // 检查API健康状态
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                
+                const indicator = document.getElementById('statusIndicator');
+                if (data.status === 'healthy' && data.model_loaded) {
+                    indicator.innerHTML = `
+                        <span class="w-3 h-3 bg-green-400 rounded-full mr-2"></span>
+                        <span>系统就绪</span>
+                    `;
+                } else {
+                    indicator.innerHTML = `
+                        <span class="w-3 h-3 bg-yellow-400 rounded-full mr-2"></span>
+                        <span>系统启动中</span>
+                    `;
+                }
+            } catch (error) {
+                const indicator = document.getElementById('statusIndicator');
+                indicator.innerHTML = `
+                    <span class="w-3 h-3 bg-red-400 rounded-full mr-2"></span>
+                    <span>连接失败</span>
+                `;
+            }
+        }
+
+        // 初始化事件监听器
+        function initializeEventListeners() {
+            document.getElementById('recordBtn').addEventListener('click', toggleRecording);
+            document.getElementById('audioFile').addEventListener('change', handleFileSelect);
+            document.getElementById('submitBtn').addEventListener('click', submitAudio);
+        }
+
+        // 录音控制
+        async function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+            const btnText = document.getElementById('recordBtnText');
+            
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                // 开始录音
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        audioChunks.push(event.data);
+                    };
+                    
+                    mediaRecorder.onstop = () => {
+                        recordedBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioURL = URL.createObjectURL(recordedBlob);
+                        
+                        const audioPlayer = document.getElementById('audioPlayer');
+                        audioPlayer.src = audioURL;
+                        document.getElementById('audioPlayerContainer').classList.remove('hidden');
+                        
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+                    
+                    mediaRecorder.start();
+                    btn.classList.add('recording', 'bg-red-600');
+                    btnText.textContent = '停止录音';
+                } catch (error) {
+                    alert('无法访问麦克风: ' + error.message);
+                }
+            } else {
+                // 停止录音
+                mediaRecorder.stop();
+                btn.classList.remove('recording', 'bg-red-600');
+                btnText.textContent = '开始录音';
+            }
+        }
+
+        // 文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                recordedBlob = file;
+                const audioURL = URL.createObjectURL(file);
+                
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = audioURL;
+                document.getElementById('audioPlayerContainer').classList.remove('hidden');
+            }
+        }
+
+        // 提交音频
+        async function submitAudio() {
+            if (!recordedBlob) {
+                alert('请先录制或上传音频');
+                return;
+            }
+            
+            // 显示加载状态
+            document.getElementById('initialState').classList.add('hidden');
+            document.getElementById('resultContainer').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            
+            // 创建FormData
+            const formData = new FormData();
+            formData.append('file', recordedBlob, 'audio.wav');
+            
+            try {
+                const response = await fetch(`${API_URL}/predict`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('预测失败');
+                }
+                
+                const result = await response.json();
+                displayResult(result);
+            } catch (error) {
+                alert('错误: ' + error.message);
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('initialState').classList.remove('hidden');
+            }
+        }
+
+        // 显示结果
+        function displayResult(result) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('resultContainer').classList.remove('hidden');
+            
+            // 显示主要情感
+            const emotionChinese = emotionLabels[result.predicted_emotion] || result.predicted_emotion;
+            document.getElementById('mainEmotion').textContent = emotionChinese;
+            document.getElementById('confidence').textContent = (result.confidence * 100).toFixed(1) + '%';
+            
+            // 绘制概率分布图
+            drawProbabilityChart(result.all_probabilities);
+            
+            // 生成情感卡片
+            generateEmotionCards(result.all_probabilities);
+        }
+
+        // 绘制概率图表
+        function drawProbabilityChart(probabilities) {
+            const ctx = document.getElementById('probChart').getContext('2d');
+            
+            if (probChart) {
+                probChart.destroy();
+            }
+            
+            const labels = Object.keys(probabilities).map(k => emotionLabels[k] || k);
+            const data = Object.values(probabilities).map(v => v * 100);
+            const colors = Object.keys(probabilities).map(k => emotionColors[k]);
+            
+            probChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '概率 (%)',
+                        data: data,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // 生成情感卡片
+        function generateEmotionCards(probabilities) {
+            const container = document.getElementById('emotionCards');
+            container.innerHTML = '';
+            
+            for (const [emotion, prob] of Object.entries(probabilities)) {
+                const emotionChinese = emotionLabels[emotion] || emotion;
+                const percentage = (prob * 100).toFixed(1);
+                const color = emotionColors[emotion];
+                
+                const card = document.createElement('div');
+                card.className = 'emotion-card p-4 rounded-lg border-2';
+                card.style.borderColor = color;
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-bold" style="color: ${color}">${emotionChinese}</span>
+                        <span class="text-lg font-bold">${percentage}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full" style="width: ${percentage}%; background-color: ${color}"></div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            }
+        }
+    </script>
+</body>
+</html>

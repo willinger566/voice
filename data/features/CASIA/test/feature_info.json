@@ -1,0 +1,6 @@
+{
+  "num_samples": 180,
+  "feature_dim": 1024,
+  "granularity": "utterance",
+  "model": "C:\\Users\\Admin\\.cache\\modelscope\\hub\\models\\iic\\emotion2vec_plus_large"
+}
