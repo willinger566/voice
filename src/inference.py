@@ -72,9 +72,8 @@ class EmotionRecognizer:
             raise RuntimeError("未找到 feats 字段")
 
         # 3. 统一成 numpy
-        feats = np.asarray(feats)          # shape: (768,) 或 (T, 768)
+        feats = np.asarray(feats)          
 
-        # 4. 后续分类器逻辑不变
         feats_tensor = torch.from_numpy(feats).float().unsqueeze(0).to(self.device)
 
         with torch.no_grad():

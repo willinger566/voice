@@ -3,5 +3,5 @@
   "hidden_dim": 256,
   "num_classes": 6,
   "dropout": 0.5,
-  "best_val_acc": 0.8055555555555556
+  "best_val_acc": 0.8111111111111111
 }

@@ -1,6 +1,5 @@
 """
-模型评估脚本 (修复版)
-适配新的数据预处理流程（标准化 + 自动维度检测）
+模型评估脚本 
 """
 
 import torch
@@ -15,8 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from train import EmotionClassifier, EmotionDataset
 from torch.utils.data import DataLoader
-import joblib  # 用于加载 scaler
-
+import joblib  
 def plot_confusion_matrix(cm, class_names, save_path):
     """绘制混淆矩阵"""
     plt.figure(figsize=(10, 8))
@@ -31,12 +29,12 @@ def plot_confusion_matrix(cm, class_names, save_path):
     plt.close()
 
 def load_and_process_test_data(features_path, labels_path, scaler_path):
-    """加载并预处理测试数据（关键修复）"""
+    """加载并预处理测试数据"""
     print(f"加载测试数据: {features_path}")
     test_feats = np.load(features_path)
     test_labels = np.load(labels_path)
     
-    # 1. 处理维度 (Pooling)
+    # 1. 处理维度 
     if len(test_feats.shape) == 3:
         print("执行 Mean Pooling...")
         test_feats = np.mean(test_feats, axis=1)
@@ -44,10 +42,9 @@ def load_and_process_test_data(features_path, labels_path, scaler_path):
     # 2. 加载训练好的 Scaler 并进行标准化
     print(f"加载标准化参数: {scaler_path}")
     if not Path(scaler_path).exists():
-        raise FileNotFoundError(f"找不到 {scaler_path}，请先运行训练脚本！")
+        raise FileNotFoundError(f"找不到 {scaler_path}")
         
     scaler = joblib.load(scaler_path)
-    # 注意：这里只能用 transform，绝对不能用 fit_transform
     test_feats = scaler.transform(test_feats)
     print("测试集标准化完成")
     
@@ -126,16 +123,15 @@ def main():
     with open(config_path, 'r') as f:
         model_config = json.load(f)
     
-    # 2. 加载并预处理测试数据 (这是修复的核心)
+    # 2. 加载并预处理测试数据
     test_feats, test_labels = load_and_process_test_data(TEST_FEATURES, TEST_LABELS, SCALER_PATH)
     
     # 3. 创建 Dataset 和 Loader
-    # 现在传入的是 numpy 数组，而不是路径字符串，这就修复了 TypeError
+ 
     test_dataset = EmotionDataset(test_feats, test_labels)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     
     # 4. 创建模型
-    # 使用配置文件中保存的 actual input_dim
     input_dim = model_config.get('input_dim', 768) 
     print(f"模型输入维度: {input_dim}")
     

@@ -73,7 +73,7 @@ class Emotion2VecFeatureExtractor:
             data_dir: 数据目录
             output_dir: 输出目录
             granularity: 特征粒度
-            batch_size: 批处理大小（暂未实现真正的批处理）
+            batch_size: 批处理大小
         """
         data_dir = Path(data_dir)
         output_dir = Path(output_dir)

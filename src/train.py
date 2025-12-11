@@ -1,10 +1,7 @@
 """
-emotion2vec微调训练脚本 (最终修复版)
+emotion2vec微调训练脚本 
 使用CASIA数据集进行情感分类器训练
 包含特征标准化(StandardScaler)、BatchNorm优化、自动维度检测
-修复了:
-1. PyTorch scheduler verbose 参数报错
-2. 特征维度不匹配 (1024 vs 768) 报错
 """
 
 import os
@@ -38,7 +35,7 @@ class EmotionDataset(Dataset):
 
 
 class EmotionClassifier(nn.Module):
-    """情感分类器模型 - 增强版"""
+    """情感分类器模型"""
     
     def __init__(self, input_dim, hidden_dim=256, num_classes=6, dropout=0.5):
         super(EmotionClassifier, self).__init__()
@@ -77,8 +74,7 @@ class EmotionTrainer:
         
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = optim.AdamW(self.model.parameters(), lr=lr, weight_decay=1e-4)
-        
-        # 移除了 verbose=True
+   
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, mode='max', factor=0.5, patience=5
         )
@@ -167,7 +163,7 @@ class EmotionTrainer:
             if val_acc > self.best_val_acc:
                 self.best_val_acc = val_acc
                 self.best_model_state = self.model.state_dict().copy()
-                print(f"✓ 保存最佳模型 (验证准确率: {val_acc:.4f})")
+                print(f"保存最佳模型 (验证准确率: {val_acc:.4f})")
         
         if self.best_model_state is not None:
             self.model.load_state_dict(self.best_model_state)
@@ -214,7 +210,6 @@ def main(args):
     # 1. 加载数据
     train_feats, train_labels, val_feats, val_labels = load_and_preprocess_data(args)
     
-    # === 关键修复：自动检测输入维度 ===
     actual_input_dim = train_feats.shape[1]
     print(f"\n>>> 自动检测到的输入特征维度: {actual_input_dim}")
     if actual_input_dim != args.input_dim:
@@ -226,11 +221,11 @@ def main(args):
     
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0) # windows下建议num_workers设为0
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
-    
-    # 3. 创建模型 (使用自动检测的维度)
+
+    # 3. 创建模型 
     print("\n创建模型...")
     model = EmotionClassifier(
-        input_dim=actual_input_dim,  # 使用实际维度
+        input_dim=actual_input_dim,  
         hidden_dim=args.hidden_dim,
         num_classes=args.num_classes,
         dropout=args.dropout
@@ -253,9 +248,9 @@ def main(args):
     with open(Path(args.output_dir) / 'training_history.json', 'w') as f:
         json.dump(history, f, indent=2)
     
-    # 保存配置时，确保保存的是实际使用的 input_dim
+ 
     model_config = {
-        'input_dim': actual_input_dim, # 保存实际维度
+        'input_dim': actual_input_dim, 
         'hidden_dim': args.hidden_dim,
         'num_classes': args.num_classes,
         'dropout': args.dropout,

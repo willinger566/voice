@@ -91,7 +91,7 @@ class CASIADataPreprocessor:
             # 归一化
             y = librosa.util.normalize(y)
             
-            # 去除静音段（可选）
+            # 去除静音段
             y_trimmed, _ = librosa.effects.trim(y, top_db=20)
             
             # 保存处理后的音频
@@ -164,7 +164,7 @@ class CASIADataPreprocessor:
         metadata_df = pd.DataFrame(metadata)
         metadata_df.to_csv(split_dir / 'metadata.csv', index=False)
         
-        # 生成wav.scp文件（Kaldi风格）
+        # 生成wav.scp文件
         with open(split_dir / 'wav.scp', 'w') as f:
             for _, row in metadata_df.iterrows():
                 f.write(f"{row['filename']}\t{row['path']}\n")
@@ -183,10 +183,10 @@ class CASIADataPreprocessor:
         print("开始CASIA数据集预处理")
         print("=" * 60)
         
-        # 1. 扫描数据集
+        # 扫描数据集
         df = self.scan_dataset()
         
-        # 2. 划分数据集
+        # 划分数据集
         train_df, val_df, test_df = self.split_dataset(df)
         
         print(f"\n数据集划分:")
@@ -194,12 +194,12 @@ class CASIADataPreprocessor:
         print(f"  验证集: {len(val_df)} 样本")
         print(f"  测试集: {len(test_df)} 样本")
         
-        # 3. 处理各个分割
+        # 处理各个分割
         train_meta = self.process_split(train_df, 'train')
         val_meta = self.process_split(val_df, 'val')
         test_meta = self.process_split(test_df, 'test')
         
-        # 4. 保存数据集统计信息
+        # 保存数据集统计信息
         stats = {
             'total_samples': len(df),
             'train_samples': len(train_meta),
