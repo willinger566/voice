@@ -214,7 +214,6 @@ def main(args):
     # 1. 加载数据
     train_feats, train_labels, val_feats, val_labels = load_and_preprocess_data(args)
     
-    # === 关键修复：自动检测输入维度 ===
     actual_input_dim = train_feats.shape[1]
     print(f"\n>>> 自动检测到的输入特征维度: {actual_input_dim}")
     if actual_input_dim != args.input_dim:
@@ -226,11 +225,11 @@ def main(args):
     
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0) # windows下建议num_workers设为0
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
-    
-    # 3. 创建模型 (使用自动检测的维度)
+
+    # 3. 创建模型 
     print("\n创建模型...")
     model = EmotionClassifier(
-        input_dim=actual_input_dim,  # 使用实际维度
+        input_dim=actual_input_dim,  
         hidden_dim=args.hidden_dim,
         num_classes=args.num_classes,
         dropout=args.dropout
@@ -253,9 +252,9 @@ def main(args):
     with open(Path(args.output_dir) / 'training_history.json', 'w') as f:
         json.dump(history, f, indent=2)
     
-    # 保存配置时，确保保存的是实际使用的 input_dim
+ 
     model_config = {
-        'input_dim': actual_input_dim, # 保存实际维度
+        'input_dim': actual_input_dim, 
         'hidden_dim': args.hidden_dim,
         'num_classes': args.num_classes,
         'dropout': args.dropout,
